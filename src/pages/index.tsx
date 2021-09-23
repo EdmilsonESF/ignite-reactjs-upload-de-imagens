@@ -1,7 +1,8 @@
 import { Button, Box } from '@chakra-ui/react';
-import { FormEvent, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useInfiniteQuery } from 'react-query';
 
+import { useEffect } from 'react';
 import { Header } from '../components/Header';
 import { CardList } from '../components/CardList';
 import { api } from '../services/api';
@@ -9,12 +10,13 @@ import { Loading } from '../components/Loading';
 import { Error } from '../components/Error';
 
 export default function Home(): JSX.Element {
-  async function getImages({ pageParam = null }): Promise<any> {
+  const fetchImages = async ({ pageParam = null }) => {
+    // await setTimeout(()=>{console.log('yeye')},5000);
     const response = await api.get('/api/images', {
       params: { after: pageParam },
     });
     return response.data;
-  }
+  };
   const {
     data,
     isLoading,
@@ -22,28 +24,35 @@ export default function Home(): JSX.Element {
     isFetchingNextPage,
     fetchNextPage,
     hasNextPage,
-  } = useInfiniteQuery('images', getImages, {
-    getNextPageParam: lastPage => lastPage.after ?? false,
-  });
-
-  function loadMoreImages(event: FormEvent): void {
-    event.preventDefault();
-    fetchNextPage();
-  }
+  } = useInfiniteQuery(
+    'images',
+    // TODO AXIOS REQUEST WITH PARAM
+    fetchImages,
+    // TODO GET AND RETURN NEXT PAGE PARAM
+    { getNextPageParam: dataResult => dataResult?.after || null }
+  );
 
   const formattedData = useMemo(() => {
-    if (data) {
-      return data.pages.flatMap(page => page.data);
-    }
-    return null;
+    // TODO FORMAT AND FLAT DATA ARRAY
+    return data?.pages
+      .map(item => {
+        return item.data;
+      })
+      .flat();
   }, [data]);
 
+  // TODO RENDER LOADING SCREEN
   if (isLoading) {
     return <Loading />;
   }
 
+  // TODO RENDER ERROR SCREEN
   if (isError) {
     return <Error />;
+  }
+
+  function handleGetMore(): void {
+    fetchNextPage();
   }
 
   return (
@@ -52,16 +61,15 @@ export default function Home(): JSX.Element {
 
       <Box maxW={1120} px={20} mx="auto" my={20}>
         <CardList cards={formattedData} />
-        {hasNextPage && (
-          <Button
-            type="button"
-            onClick={e => loadMoreImages(e)}
-            mt="10"
-            disabled={isFetchingNextPage}
-          >
-            {isFetchingNextPage ? 'Carregando...' : 'Carregar mais'}
-          </Button>
-        )}
+
+        {
+          /* TODO RENDER LOAD MORE BUTTON IF DATA HAS NEXT PAGE */
+          hasNextPage && (
+            <Button mt={6} onClick={handleGetMore}>
+              {isFetchingNextPage ? 'Carregando...' : 'Carregar mais'}
+            </Button>
+          )
+        }
       </Box>
     </>
   );
